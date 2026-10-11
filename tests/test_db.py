@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from app import db as db_module
@@ -14,6 +16,15 @@ def test_init_db_sets_client_and_returns_database(monkeypatch):
     assert result.name == "test-db"
 
 
+def test_init_db_uses_a_short_server_selection_timeout(monkeypatch):
+    monkeypatch.setattr(db_module, "_client", None)
+    monkeypatch.setattr(db_module, "_db", None)
+
+    db_module.init_db("mongodb://localhost:27017/test-db")
+
+    assert db_module._client.options.server_selection_timeout == 5
+
+
 def test_get_db_raises_when_not_initialized(monkeypatch):
     monkeypatch.setattr(db_module, "_db", None)
 
@@ -26,3 +37,25 @@ def test_get_db_returns_initialized_database(monkeypatch):
     monkeypatch.setattr(db_module, "_db", sentinel)
 
     assert db_module.get_db() is sentinel
+
+
+def test_ping_is_true_when_mongo_answers(monkeypatch):
+    fake_db = MagicMock()
+    monkeypatch.setattr(db_module, "_db", fake_db)
+
+    assert db_module.ping() is True
+    fake_db.command.assert_called_once_with("ping")
+
+
+def test_ping_is_false_when_mongo_fails(monkeypatch):
+    fake_db = MagicMock()
+    fake_db.command.side_effect = Exception("no servers available")
+    monkeypatch.setattr(db_module, "_db", fake_db)
+
+    assert db_module.ping() is False
+
+
+def test_ping_is_false_when_not_initialized(monkeypatch):
+    monkeypatch.setattr(db_module, "_db", None)
+
+    assert db_module.ping() is False

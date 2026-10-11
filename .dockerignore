@@ -1,0 +1,17 @@
+# Only what the image needs is sent to "docker build".
+.venv
+__pycache__
+*.pyc
+tests
+htmlcov
+.coverage
+.pytest_cache
+.git
+.github
+.env
+.env.*
+*.md
+requirements-dev.txt
+pytest.ini
+Dockerfile
+.dockerignore
