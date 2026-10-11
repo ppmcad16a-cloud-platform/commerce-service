@@ -4,6 +4,7 @@ from flask_cors import CORS
 from . import db as db_module
 from .config import Config
 from .graphql import bp as graphql_bp
+from .observability import init_observability
 
 
 def create_app(config_object=Config):
@@ -16,10 +17,7 @@ def create_app(config_object=Config):
 
     Cart/order/merchant used to each be their own REST blueprint (still in
     git history); this service is now a single GraphQL schema
-    (app/graphql/schema.py) behind one POST endpoint instead — see
-    CLAUDE.md's commerce_server section for the full rationale, and
-    api_gateway/index.js + client/'s Cart/Order/Merchant actions.js for the
-    other two places that changed to match.
+    (app/graphql/schema.py) behind one POST endpoint instead.
     """
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -30,6 +28,16 @@ def create_app(config_object=Config):
     # monkeypatch `app.db.init_db`/`app.db._db` directly and have it take
     # effect here regardless of import order — see tests/conftest.py.
     db_module.init_db(app.config["MONGO_URI"])
+
+    # Fail fast: if MongoDB is unreachable at startup (wrong URI/password,
+    # IP not on the Atlas allow-list ...) refuse to start. gunicorn then
+    # exits, and Kubernetes restarts the pod with back-off and shows
+    # CrashLoopBackOff - far easier to notice than a "running" pod that
+    # can never serve a request.
+    if app.config.get("VERIFY_DB_ON_STARTUP", True) and not db_module.ping():
+        raise RuntimeError("MongoDB is not reachable - refusing to start")
+
+    init_observability(app, is_ready=db_module.ping)
 
     api_prefix = f"/{app.config['BASE_API_URL']}"
     app.register_blueprint(graphql_bp, url_prefix=f"{api_prefix}/graphql")

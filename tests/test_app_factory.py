@@ -1,3 +1,9 @@
+import pytest
+
+from app import create_app
+from tests.conftest import TestConfig
+
+
 def test_unmatched_route_returns_404(client):
     res = client.get("/api/does-not-exist")
     assert res.status_code == 404
@@ -15,3 +21,19 @@ def test_graphql_endpoint_is_mounted_under_the_api_prefix(client):
 def test_graphql_endpoint_only_accepts_post(client):
     res = client.get("/api/graphql")
     assert res.status_code == 405
+
+
+def test_refuses_to_start_when_mongo_is_unreachable(mock_db):
+    mock_db.command.side_effect = Exception("no servers available")
+
+    with pytest.raises(RuntimeError, match="MongoDB is not reachable"):
+        create_app(TestConfig)
+
+
+def test_startup_check_can_be_disabled(mock_db):
+    mock_db.command.side_effect = Exception("no servers available")
+
+    class NoCheckConfig(TestConfig):
+        VERIFY_DB_ON_STARTUP = False
+
+    assert create_app(NoCheckConfig) is not None

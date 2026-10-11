@@ -35,6 +35,8 @@ jobs:
     uses: ppmcad16a-cloud-platform/core-cloud-platform/.github/workflows/python-app.yaml@v1
     with:
       python-version: "3.12"
+      build-docker: true
+      image-name: commerce-service
 
   # Scan the whole git history for leaked secrets.
   secret-scan:
