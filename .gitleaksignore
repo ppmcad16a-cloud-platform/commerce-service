@@ -1,0 +1,7 @@
+# gitleaks false positives - reviewed and approved.
+# Each line is the fingerprint gitleaks prints for a finding.
+# Only add a line here after confirming the value is NOT a real secret.
+
+# Fake JWT signing key used only by unit tests (never deployed anywhere).
+83ff0d37f0f3ca1b995951e7341906a28f354042:tests/conftest.py:generic-api-key:10
+83ff0d37f0f3ca1b995951e7341906a28f354042:tests/test_auth.py:generic-api-key:13
